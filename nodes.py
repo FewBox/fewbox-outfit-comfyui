@@ -25,20 +25,29 @@ def tensor_to_pil(tensor, is_mask=False):
         return Image.fromarray(tensor.numpy().astype(np.uint8), mode='RGB')
 
 def pil_to_tensor(image, is_mask=False):
+    # 检查图像模式
     if image.mode not in ['L', 'RGB']:
-        raise ValueError("Image mode must be 'L' or 'RGB'")
+        raise ValueError("Image mode must be 'L' (grayscale) or 'RGB'")
+
+    # 将 PIL 图像转换为 NumPy 数组
     array = np.array(image)
-    tensor = torch.from_numpy(array.astype(np.float32) / 255.0)
+
+    # 转换为 PyTorch 张量，并将值范围从 [0, 255] 转换为 [0, 1]
+    tensor = torch.from_numpy(array).float() / 255.0
+
     if is_mask:
-        # 掩膜添加批次维度，保持形状为 (1, H, W)
-        return tensor.unsqueeze(0)
+        # 掩码图像是单通道的，形状为 [H, W]
+        if image.mode != 'L':
+            raise ValueError("Mask image must be in 'L' mode")
+        tensor = tensor.unsqueeze(0)  # 添加通道维度，形状变为 [1, H, W]
     else:
-        # 处理普通图像
-        if tensor.dim() == 2:
-            # 单通道图像添加通道维度 (H, W) -> (H, W, 1)
-            tensor = tensor.unsqueeze(-1)
-        # 调整维度顺序为 (批次, 通道, 高, 宽)
-        return tensor.unsqueeze(0).permute(0, 3, 1, 2)
+        # 普通图像是多通道的，形状为 [H, W, C]
+        if image.mode != 'RGB':
+            raise ValueError("Image must be in 'RGB' mode")
+        #tensor = tensor.permute(2, 0, 1)  # 调整维度顺序为 [C, H, W]
+        tensor = tensor.unsqueeze(0)
+
+    return tensor
 
 def process_and_merge(garment_pil, model_pil, model_garment_pil):
     # 确定目标宽度
@@ -83,6 +92,7 @@ class FewBoxOutfit:
                 "garment": ("IMAGE",),
                 "model": ("IMAGE",),
                 "model_garment": ("MASK",),
+                "compress": ("INT", {"default": 1, "min": 0.1, "max": 1, "step": 0.1}),
             },
         }
  
@@ -101,11 +111,11 @@ class FewBoxOutfit:
         model_pil = tensor_to_pil(model)
         #model_pil.save('D:\\2test.png')
         model_garment_pil = tensor_to_pil(model_garment, is_mask=True)
-        model_garment_pil.save('D:\\3test.png')
-        #merged_image, merged_mask = process_and_merge(garment_pil, model_pil, model_garment_pil)
+        #model_garment_pil.save('D:\\3test.png')
+        merged_image, merged_mask = process_and_merge(garment_pil, model_pil, model_garment_pil)
         #merged_image.save('D:\\test1.png')
         #merged_mask.save('D:\\test2.png')
-        #tryon = pil_to_tensor(merged_image)
-        #fit = pil_to_tensor(merged_mask, is_mask=True)
+        tryon = pil_to_tensor(merged_image)
+        fit = pil_to_tensor(merged_mask, is_mask=True)
         #return (tryon, fit)
-        return (garment, model_garment)
+        return (tryon, fit)
