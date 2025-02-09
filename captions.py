@@ -1,3 +1,3 @@
 class CAPTION:
     Category = "📦 FewBox"
-    Outfit = "📦 Outfit"
+    Outfit = "Outfit"
