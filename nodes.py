@@ -49,6 +49,14 @@ def pil_to_tensor(image, is_mask=False):
 
     return tensor
 
+def compress(pil, scale):
+    if scale == 1:
+        return pil
+    else:
+        scale_width = round(pil.width * scale)
+        scale_height = round(pil.height * scale)
+        return pil.resize((scale_width, scale_height), resample=Image.Resampling.LANCZOS)
+
 def process_and_merge(garment_pil, model_pil, model_garment_pil):
     # 确定目标宽度
     target_width = min(garment_pil.width, model_pil.width)
@@ -92,7 +100,7 @@ class FewBoxOutfit:
                 "garment": ("IMAGE",),
                 "model": ("IMAGE",),
                 "model_garment": ("MASK",),
-                "compress": ("INT", {"default": 1, "min": 0.1, "max": 1, "step": 0.1}),
+                "scale": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 1.0, "step": 0.1}),
             },
         }
  
@@ -105,14 +113,14 @@ class FewBoxOutfit:
  
     CATEGORY = CAPTION.Category
  
-    def convert(self, garment, model, model_garment):
+    def convert(self, garment, model, model_garment, scale):
         garment_pil = tensor_to_pil(garment)
         #garment_pil.save('D:\\1test.png')
         model_pil = tensor_to_pil(model)
         #model_pil.save('D:\\2test.png')
         model_garment_pil = tensor_to_pil(model_garment, is_mask=True)
         #model_garment_pil.save('D:\\3test.png')
-        merged_image, merged_mask = process_and_merge(garment_pil, model_pil, model_garment_pil)
+        merged_image, merged_mask = process_and_merge(compress(garment_pil, scale), compress(model_pil, scale), compress(model_garment_pil, scale))
         #merged_image.save('D:\\test1.png')
         #merged_mask.save('D:\\test2.png')
         tryon = pil_to_tensor(merged_image)
