@@ -2,9 +2,12 @@ import torch
 import numpy as np
 from PIL import Image
 from .captions import CAPTION
+from .paths import PATH
+import os
+from webdav3.client import Client
+from webdav3.exceptions import WebDavException
 
 def tensor_to_pil(tensor, is_mask=False):
-    print("ndim", tensor.ndim)
     if tensor.ndim == 4:
         tensor = tensor.squeeze(0)
     if is_mask:
@@ -89,7 +92,7 @@ def process_and_merge(garment_pil, model_pil, model_garment_pil):
     
     return canvas, mask_canvas
 
-class FewBoxOutfit:
+class FewBoxInContextLora:
     def __init__(self):
         pass
     
@@ -127,3 +130,50 @@ class FewBoxOutfit:
         fit = pil_to_tensor(merged_mask, is_mask=True)
         #return (tryon, fit)
         return (tryon, fit)
+    
+class FewBoxWebDAV:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "fitting": ("IMAGE",),
+                "host": ("STRING",),
+                "username": ("STRING",),
+                "password": ("STRING",),
+                "protocol": (["http", "https"], {"default": "http"}),
+                "port": ("INT", {"default": 80}),
+                "path": ("STRING",),
+            },
+        }
+ 
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("webdav",)
+ 
+    FUNCTION = "upload_webdav"
+ 
+    OUTPUT_NODE = False
+ 
+    CATEGORY = CAPTION.Category
+ 
+    def upload_webdav(self, fitting, host, username, password, protocol, port, path):
+        os.makedirs(PATH.Outfit, exist_ok=True)
+        file_path = os.path.join(PATH.Outfit, "fitting.png")
+        fitting_pil = tensor_to_pil(fitting)
+        fitting_pil.save(file_path)
+        hostname = f"{protocol}://{host}:{port}"
+        print(hostname)
+        options = {
+            'webdav_hostname': hostname,
+            'webdav_login': username,
+            'webdav_password': password
+        }
+        client = Client(options)
+        try:
+            client.upload_sync(remote_path=path, local_path=file_path)
+            print("File uploaded successfully.")
+        except WebDavException as e:
+            print(f"Error uploading file: {e}")    
+        return (hostname)

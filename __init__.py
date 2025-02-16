@@ -1,16 +1,18 @@
 from .captions import CAPTION
-from .nodes import FewBoxOutfit
+from .nodes import FewBoxInContextLora, FewBoxWebDAV
 
 # A dictionary that contains all nodes you want to export with their names
 # NOTE: names should be globally unique
 
 NODE_CLASS_MAPPINGS = {
-    "FewBoxOutfit": FewBoxOutfit
+    "FewBoxInContextLora": FewBoxInContextLora,
+    "FewBoxWebDAV": FewBoxWebDAV
 }
  
 # A dictionary that contains the friendly/humanly readable titles for the nodes
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "FewBoxOutfit": CAPTION.Outfit
+    "FewBoxInContextLora": CAPTION.InContextLora,
+    "FewBoxWebDAV": CAPTION.WebDAV
 }
 
 WEB_DIRECTORY = "./js"

@@ -1,3 +1,4 @@
 class CAPTION:
     Category = "📦 FewBox"
-    Outfit = "Outfit"
+    InContextLora = "🩱 In Context Lora"
+    WebDAV = "🩱 NAS WebDAV"
