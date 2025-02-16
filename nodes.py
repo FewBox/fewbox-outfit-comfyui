@@ -149,12 +149,12 @@ class FewBoxWebDAV:
             },
         }
  
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("webdav",)
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
  
     FUNCTION = "upload_webdav"
  
-    OUTPUT_NODE = False
+    OUTPUT_NODE = True
  
     CATEGORY = CAPTION.Category
  
@@ -164,7 +164,6 @@ class FewBoxWebDAV:
         fitting_pil = tensor_to_pil(fitting)
         fitting_pil.save(file_path)
         hostname = f"{protocol}://{host}:{port}"
-        print(hostname)
         options = {
             'webdav_hostname': hostname,
             'webdav_login': username,
@@ -176,4 +175,4 @@ class FewBoxWebDAV:
             print("File uploaded successfully.")
         except WebDavException as e:
             print(f"Error uploading file: {e}")    
-        return (hostname)
+        return ()
