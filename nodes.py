@@ -92,6 +92,15 @@ def process_and_merge(garment_pil, model_pil, model_garment_pil):
     
     return canvas, mask_canvas
 
+
+def open_image(path):
+    try:
+        image = Image.open(path)
+        return image
+    except Exception as e:
+        print(f"Unable to load image: {e}")
+        return None
+
 class FewBoxInContextLora:
     def __init__(self):
         pass
@@ -128,7 +137,7 @@ class FewBoxInContextLora:
         #merged_mask.save('D:\\test2.png')
         tryon = pil_to_tensor(merged_image)
         fit = pil_to_tensor(merged_mask, is_mask=True)
-        #return (tryon, fit)
+        #return (pil_to_tensor(garment_pil), fit)
         return (tryon, fit)
     
 class FewBoxWebDAV:
@@ -176,3 +185,40 @@ class FewBoxWebDAV:
         except WebDavException as e:
             print(f"Error uploading file: {e}")    
         return ()
+    
+class FewBoxWatermark:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "original": ("IMAGE",),
+                "watermark_path": ("STRING",),
+                "scale": ([0.1, 0.15, 0.2, 0.25], {"default": 0.1}),
+                "margin": ([10, 15, 20], {"default": 10}),
+            },
+        }
+ 
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("reproduction",)
+ 
+    FUNCTION = "embed"
+ 
+    OUTPUT_NODE = True
+ 
+    CATEGORY = CAPTION.Category
+ 
+    def embed(self, original, watermark_path, scale, margin):
+        original_pil = tensor_to_pil(original)
+        watermark_pil = open_image(watermark_path)
+        scale_ratio = min(int(original_pil.width * scale) / watermark_pil.width, int(original_pil.height * scale) / watermark_pil.height)
+        compress(watermark_pil, scale_ratio)
+        position = (original_pil.width - watermark_pil.width - margin, original_pil.height - watermark_pil.height - margin)
+        combined = Image.new("RGBA", original_pil.size, (0, 0, 0, 0))
+        combined.paste(original_pil, (0, 0))
+        combined.paste(watermark_pil, position, mask=watermark_pil)
+        #file_path = os.path.join(PATH.Test, "watermark.png")
+        #combined.save(file_path)
+        return (pil_to_tensor(combined))
