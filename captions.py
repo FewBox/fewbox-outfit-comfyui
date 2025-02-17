@@ -3,3 +3,4 @@ class CAPTION:
     InContextLora = "🩱 In Context Lora"
     WebDAV = "🩱 NAS WebDAV"
     Watermark = "🩱 Watermark"
+    Lab = "🧪 Lab"

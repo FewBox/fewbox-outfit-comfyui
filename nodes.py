@@ -7,27 +7,56 @@ import os
 from webdav3.client import Client
 from webdav3.exceptions import WebDavException
 
-def tensor_to_pil(tensor, is_mask=False):
-    if tensor.ndim == 4:
-        tensor = tensor.squeeze(0)
-    if is_mask:
-        print("shape", tensor.shape)
-        if tensor.ndim == 4 and tensor.shape[1] == 1:
-            tensor = tensor.squeeze(0)
-        if tensor.ndim == 3 and tensor.shape[0] == 1:
-            tensor = tensor.squeeze(0)
-        # 确保张量是单通道的
-        if tensor.ndim != 2:
-            raise ValueError("Mask tensor must have shape [H, W] or [1, H, W]")
-        # 将张量的值范围从 [0, 1] 转换为 [0, 255]
-        array = (tensor.numpy() * 255).astype(np.uint8)
-        # 使用 PIL.Image.fromarray 创建 PIL 图像
-        return Image.fromarray(array, mode='L')
-    else:
-        tensor = tensor * 255
-        return Image.fromarray(tensor.numpy().astype(np.uint8), mode='RGB')
+def image_tensor_to_pil(tensor):
+    # 去掉Batch维度（[B,H,W,C] -> [H,W,C]）
+    # [1, 1785, 1340, 3] -> [1785, 1340, 3]
+    tensor = tensor.squeeze(0)
+    tensor = tensor * 255
+    return Image.fromarray(tensor.numpy().astype(np.uint8), mode='RGB')
+        
+    
+def mask_tensor_to_pil(tensor):
+    # 去掉Batch维度（[B,H,W] -> [H,W]）
+    # [1, 1785, 1340] -> [1785, 1340]
+    tensor = tensor.squeeze(0)
+    tensor = tensor * 255
+    return Image.fromarray(tensor.numpy().astype(np.uint8), mode='L')
 
-def pil_to_tensor(image, is_mask=False):
+def mask_tensor_to_transparent_pil(tensor):
+    # 去掉Batch维度（[B,H,W] -> [H,W]）
+    # [1, 1785, 1340] -> [1785, 1340]
+    tensor = tensor.squeeze(0)
+    # 去掉Channel维度（[H,W] -> [H,W,C]）
+    # [1785, 1340] -> [1785, 1340, 1]
+    tensor = tensor.unsqueeze(2)
+    # [1785, 1340, 1] -> [1785, 1340, 2]
+    tensor = tensor.repeat(1, 1, 2)
+    tensor = tensor * 255
+    return Image.fromarray(tensor.numpy().astype(np.uint8), mode='LA')
+
+def mask_tensor_to_revert_transparent_pil(tensor):
+    # 去掉Batch维度（[B,H,W] -> [H,W]）
+    # [1, 1785, 1340] -> [1785, 1340]
+    tensor = tensor.squeeze(0)
+    # 去掉Channel维度（[H,W] -> [H,W,C]）
+    # [1785, 1340] -> [1785, 1340, 1]
+    tensor = tensor.unsqueeze(2)
+    # [1785, 1340, 1] -> [1785, 1340, 2]
+    tensor = tensor.repeat(1, 1, 2)
+    tensor = tensor * 255
+    return Image.fromarray(tensor.numpy().astype(np.uint8), mode='LA')
+
+def image_pil_to_tensor(image):
+    # 检查图像模式
+    if image.mode not in ['L', 'RGB', 'RGBA']:
+        raise ValueError(f"{image.mode} Image mode must be 'L' (grayscale) or 'RGB' or 'RGBA'")
+    array = np.array(image.convert("RGB"))
+    tensor = torch.from_numpy(array).float() / 255.0
+    tensor = tensor.unsqueeze(0)
+    print(f"XXX{tensor.shape}")
+    return tensor
+
+def mask_pil_to_tensor(image, is_mask=False):
     # 检查图像模式
     if image.mode not in ['L', 'RGB']:
         raise ValueError("Image mode must be 'L' (grayscale) or 'RGB'")
@@ -38,18 +67,10 @@ def pil_to_tensor(image, is_mask=False):
     # 转换为 PyTorch 张量，并将值范围从 [0, 255] 转换为 [0, 1]
     tensor = torch.from_numpy(array).float() / 255.0
 
-    if is_mask:
-        # 掩码图像是单通道的，形状为 [H, W]
-        if image.mode != 'L':
-            raise ValueError("Mask image must be in 'L' mode")
-        tensor = tensor.unsqueeze(0)  # 添加通道维度，形状变为 [1, H, W]
-    else:
-        # 普通图像是多通道的，形状为 [H, W, C]
-        if image.mode != 'RGB':
-            raise ValueError("Image must be in 'RGB' mode")
-        #tensor = tensor.permute(2, 0, 1)  # 调整维度顺序为 [C, H, W]
-        tensor = tensor.unsqueeze(0)
-
+    # 掩码图像是单通道的，形状为 [H, W]
+    if image.mode != 'L':
+        raise ValueError("Mask image must be in 'L' mode")
+    tensor = tensor.unsqueeze(0)  # 添加通道维度，形状变为 [1, H, W]
     return tensor
 
 def compress(pil, scale):
@@ -126,17 +147,17 @@ class FewBoxInContextLora:
     CATEGORY = CAPTION.Category
  
     def convert(self, garment, model, model_garment, scale):
-        garment_pil = tensor_to_pil(garment)
+        garment_pil = image_tensor_to_pil(garment)
         #garment_pil.save('D:\\1test.png')
-        model_pil = tensor_to_pil(model)
+        model_pil = image_tensor_to_pil(model)
         #model_pil.save('D:\\2test.png')
-        model_garment_pil = tensor_to_pil(model_garment, is_mask=True)
+        model_garment_pil = mask_tensor_to_pil(model_garment)
         #model_garment_pil.save('D:\\3test.png')
         merged_image, merged_mask = process_and_merge(compress(garment_pil, scale), compress(model_pil, scale), compress(model_garment_pil, scale))
         #merged_image.save('D:\\test1.png')
         #merged_mask.save('D:\\test2.png')
-        tryon = pil_to_tensor(merged_image)
-        fit = pil_to_tensor(merged_mask, is_mask=True)
+        tryon = image_pil_to_tensor(merged_image)
+        fit = mask_pil_to_tensor(merged_mask)
         #return (pil_to_tensor(garment_pil), fit)
         return (tryon, fit)
     
@@ -170,7 +191,7 @@ class FewBoxWebDAV:
     def upload_webdav(self, fitting, host, username, password, protocol, port, path):
         os.makedirs(PATH.Outfit, exist_ok=True)
         file_path = os.path.join(PATH.Outfit, "fitting.png")
-        fitting_pil = tensor_to_pil(fitting)
+        fitting_pil = image_tensor_to_pil(fitting)
         fitting_pil.save(file_path)
         hostname = f"{protocol}://{host}:{port}"
         options = {
@@ -211,14 +232,52 @@ class FewBoxWatermark:
     CATEGORY = CAPTION.Category
  
     def embed(self, original, watermark_path, scale, margin):
-        original_pil = tensor_to_pil(original)
+        original_pil = image_tensor_to_pil(original)
         watermark_pil = open_image(watermark_path)
         scale_ratio = min(int(original_pil.width * scale) / watermark_pil.width, int(original_pil.height * scale) / watermark_pil.height)
-        compress(watermark_pil, scale_ratio)
+        watermark_pil = compress(watermark_pil, scale_ratio)
         position = (original_pil.width - watermark_pil.width - margin, original_pil.height - watermark_pil.height - margin)
         combined = Image.new("RGBA", original_pil.size, (0, 0, 0, 0))
         combined.paste(original_pil, (0, 0))
         combined.paste(watermark_pil, position, mask=watermark_pil)
-        #file_path = os.path.join(PATH.Test, "watermark.png")
+        #file_path = os.path.join(PATH.Lab, "watermark.png")
         #combined.save(file_path)
-        return (pil_to_tensor(combined))
+        return (image_pil_to_tensor(combined))
+    
+class FewBoxLab:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "original_image": ("IMAGE",),
+                "original_mask": ("MASK",)
+            },
+            "optional": {},
+            "hidden": {}
+        }
+ 
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("debug",)
+ 
+    FUNCTION = "experiment"
+ 
+    #OUTPUT_NODE = True
+ 
+    CATEGORY = CAPTION.Category
+ 
+    def experiment(self, original_image, original_mask):
+        print(f"Original Image Shape: {original_image.shape}")
+        original_image_pil = image_tensor_to_pil(original_image)
+        original_image_path = os.path.join(PATH.Lab, "original_image.png")
+        original_image_pil.save(original_image_path)
+        print(f"Original Mask Shape: {original_mask.shape}")
+        original_mask_pil = mask_tensor_to_pil(original_mask)
+        original_mask_path = os.path.join(PATH.Lab, "original_mask.png")
+        original_mask_pil.save(original_mask_path)
+        original_mask_transparent_pil = mask_tensor_to_transparent_pil(original_mask)
+        original_mask_transparent_path = os.path.join(PATH.Lab, "original_mask_transparent.png")
+        original_mask_transparent_pil.save(original_mask_transparent_path)
+        return ('Go FewBox!')
