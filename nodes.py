@@ -83,33 +83,27 @@ def compress(pil, scale):
 
 def process_and_merge(garment_pil, model_pil, model_garment_pil):
     # 确定目标宽度
-    target_width = min(garment_pil.width, model_pil.width)
+    garment_spect_ratio = garment_pil.width / garment_pil.height
+    model_spect_ratio = model_pil.width / model_pil.height
     
-    # 缩放图像
-    left_ratio = target_width / garment_pil.width
-    left_height = int(garment_pil.height * left_ratio)
-    left_resized = garment_pil.resize((target_width, left_height), Image.LANCZOS)
-    
-    right_ratio = target_width / model_pil.width
-    right_height = int(model_pil.height * right_ratio)
-    right_resized = model_pil.resize((target_width, right_height), Image.LANCZOS)
-    
-    # 缩放Mask
-    mask_resized = model_garment_pil.resize((target_width, right_height), Image.NEAREST)
-    
-    # 确定最大高度
-    max_height = max(left_height, right_height)
-    
+    # 缩放Garment图像宽度匹配Model
+    if garment_spect_ratio > model_spect_ratio:
+        left_resized = garment_pil.resize((model_pil.width, round(model_pil.width * (garment_pil.height / garment_pil.width))), Image.LANCZOS)
+    else:
+        left_resized = garment_pil.resize((round(model_pil.height * (garment_pil.width / garment_pil.height)), model_pil.height), Image.LANCZOS)
     # 创建并填充画布
-    canvas = Image.new("RGB", (target_width*2, max_height))
-    mask_canvas = Image.new("L", (target_width*2, max_height))
+    canvas = Image.new("RGB", (model_pil.width*2, model_pil.height))
+    mask_canvas = Image.new("L", (model_pil.width*2, model_pil.height))
     
     # 合并左图
-    canvas.paste(left_resized, (0, (max_height-left_height)//2))
+    if garment_spect_ratio > model_spect_ratio:
+        canvas.paste(left_resized, (0, (model_pil.height-left_resized.height)//2))
+    else:
+        canvas.paste(left_resized, ((model_pil.width-left_resized.width)//2, 0))
     
     # 合并右图和Mask
-    canvas.paste(right_resized, (target_width, (max_height-right_height)//2))
-    mask_canvas.paste(mask_resized, (target_width, (max_height-right_height)//2))
+    canvas.paste(model_pil, (model_pil.width, 0))
+    mask_canvas.paste(model_garment_pil, (model_pil.width, 0))
     
     return canvas, mask_canvas
 
