@@ -30,7 +30,7 @@ def mask_tensor_to_transparent_pil(tensor):
     # [1785, 1340] -> [1785, 1340, 1]
     tensor = tensor.unsqueeze(2)
     # [1785, 1340, 1] -> [1785, 1340, 2]
-    tensor = tensor.repeat(1, 1, 2)
+    tensor = torch.cat([tensor, 1 - tensor], dim=2)
     tensor = tensor * 255
     return Image.fromarray(tensor.numpy().astype(np.uint8), mode='LA')
 
@@ -242,7 +242,7 @@ class FewBoxWatermark:
         combined.paste(watermark_pil, position, mask=watermark_pil)
         #file_path = os.path.join(PATH.Lab, "watermark.png")
         #combined.save(file_path)
-        return (image_pil_to_tensor(combined))
+        return (image_pil_to_tensor(combined),)
     
 class FewBoxLab:
     def __init__(self):
@@ -280,4 +280,7 @@ class FewBoxLab:
         original_mask_transparent_pil = mask_tensor_to_transparent_pil(original_mask)
         original_mask_transparent_path = os.path.join(PATH.Lab, "original_mask_transparent.png")
         original_mask_transparent_pil.save(original_mask_transparent_path)
-        return ('Go FewBox!')
+        original_mask_revert_transparent_pil = mask_tensor_to_revert_transparent_pil(original_mask)
+        original_mask_revert_transparent_path = os.path.join(PATH.Lab, "original_mask_revert_transparent.png")
+        original_mask_revert_transparent_pil.save(original_mask_revert_transparent_path)
+        return ('Go FewBox!',)
