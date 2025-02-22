@@ -26,7 +26,7 @@ def mask_tensor_to_transparent_pil(tensor):
     # 去掉Batch维度（[B,H,W] -> [H,W]）
     # [1, 1785, 1340] -> [1785, 1340]
     tensor = tensor.squeeze(0)
-    # 去掉Channel维度（[H,W] -> [H,W,C]）
+    # 增加Channel维度（[H,W] -> [H,W,C]）
     # [1785, 1340] -> [1785, 1340, 1]
     tensor = tensor.unsqueeze(2)
     # [1785, 1340, 1] -> [1785, 1340, 2]
@@ -48,17 +48,16 @@ def mask_tensor_to_revert_transparent_pil(tensor):
 
 def image_pil_to_tensor(image):
     # 检查图像模式
-    if image.mode not in ['L', 'RGB', 'RGBA']:
-        raise ValueError(f"{image.mode} Image mode must be 'L' (grayscale) or 'RGB' or 'RGBA'")
+    if image.mode not in ['RGB', 'RGBA']:
+        raise ValueError(f"{image.mode} Image mode must be 'RGB' or 'RGBA'")
     array = np.array(image.convert("RGB"))
     tensor = torch.from_numpy(array).float() / 255.0
     tensor = tensor.unsqueeze(0)
-    print(f"XXX{tensor.shape}")
     return tensor
 
-def mask_pil_to_tensor(image, is_mask=False):
+def mask_pil_to_tensor(image):
     # 检查图像模式
-    if image.mode not in ['L', 'RGB']:
+    if image.mode not in ['L', 'LA']:
         raise ValueError("Image mode must be 'L' (grayscale) or 'RGB'")
 
     # 将 PIL 图像转换为 NumPy 数组
@@ -67,10 +66,15 @@ def mask_pil_to_tensor(image, is_mask=False):
     # 转换为 PyTorch 张量，并将值范围从 [0, 255] 转换为 [0, 1]
     tensor = torch.from_numpy(array).float() / 255.0
 
+    if image.mode not in ['L', 'LA']:
+        raise ValueError("Mask image must be in 'L' 'LA' mode")
     # 掩码图像是单通道的，形状为 [H, W]
-    if image.mode != 'L':
-        raise ValueError("Mask image must be in 'L' mode")
-    tensor = tensor.unsqueeze(0)  # 添加通道维度，形状变为 [1, H, W]
+    if image.mode == 'L':
+        tensor = tensor.unsqueeze(0)  # 添加通道维度，形状变为 [1, H, W]
+    # TODO: 掩码图像是包含Alpha通道，形状为 [H, W, C]
+    elif image.mode == 'LA':
+        tensor = tensor.mean(-1)
+        tensor = tensor.unsqueeze(0)
     return tensor
 
 def compress(pil, scale):
@@ -237,7 +241,7 @@ class FewBoxWatermark:
         #file_path = os.path.join(PATH.Lab, "watermark.png")
         #combined.save(file_path)
         return (image_pil_to_tensor(combined),)
-    
+
 class FewBoxLab:
     def __init__(self):
         pass
