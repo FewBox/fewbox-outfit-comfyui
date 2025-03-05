@@ -241,6 +241,36 @@ class FewBoxWatermark:
         #file_path = os.path.join(PATH.Lab, "watermark.png")
         #combined.save(file_path)
         return (image_pil_to_tensor(combined),)
+    
+class FewBoxSaveImage:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "fitting": ("IMAGE",),
+                "name": ("STRING",),
+            },
+        }
+ 
+    RETURN_TYPES = ()
+    RETURN_NAMES = ()
+ 
+    FUNCTION = "save"
+ 
+    OUTPUT_NODE = True
+ 
+    CATEGORY = CAPTION.Category
+ 
+    def save(self, fitting, name):
+        os.makedirs(PATH.Output, exist_ok=True)
+        file_path = os.path.join(PATH.Output, name)
+        print(file_path)
+        fitting_pil = image_tensor_to_pil(fitting)
+        fitting_pil.save(file_path)
+        return ()
 
 class FewBoxLab:
     def __init__(self):

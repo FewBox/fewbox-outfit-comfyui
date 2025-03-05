@@ -2,5 +2,6 @@ class CAPTION:
     Category = "📦 FewBox"
     InContextLora = "🩱 In Context Lora"
     WebDAV = "🩱 NAS WebDAV"
-    Watermark = "🩱 Watermark"
+    Watermark = "🩱 Watermark",
+    SaveImage = "🩱 Save Image",
     Lab = "🧪 Lab"
