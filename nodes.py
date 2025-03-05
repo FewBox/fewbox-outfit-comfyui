@@ -267,7 +267,6 @@ class FewBoxSaveImage:
     def save(self, fitting, name):
         os.makedirs(PATH.Output, exist_ok=True)
         file_path = os.path.join(PATH.Output, name)
-        print(file_path)
         fitting_pil = image_tensor_to_pil(fitting)
         fitting_pil.save(file_path)
         return ()
