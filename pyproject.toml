@@ -1,0 +1,14 @@
+[project]
+name = "fewbox-outfit-comfyui"
+description = "Comfy Custom Node for Try-on."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/FewBox/fewbox-outfit-comfyui"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "fewbox-outfit-comfyui"
+Icon = ""
