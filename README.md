@@ -1,3 +1,6 @@
+# ComfyUI Workflow
+> try-on.json
+> Suggest use https://tryon.fewbox.com/ opensource UI and gateway
 # Basic
 - B: Batch Size，批次大小，一次处理的图像数量。
 - H: Height，图像的垂直分辨率。
