@@ -11,3 +11,6 @@
 # Mask
 LoadImage节点使用图像Alpha通道（"RGBA"中的"A"）来创建Mask。Alpha通道的值被标准化为\[0,1\](torch.float32)。许多图像（如：JPEG）没有Alpha通道。LoadImage会创建一个Shape的默认蒙版[1,64,64]
 Mask的Shape[B,H,W]，C是被隐藏的。经常会遇到B维度被隐藏的压缩蒙版张量[H,W]。**NOTE：要使用MASK，需要[B,H,W,C]，压缩C=1执行unsqueeze(-1)，压缩B执行unsqueeze(0)，要检查len（mask.shape）**
+
+**sponsor**
+https://www.paypal.com/paypalme/fewbox/1
